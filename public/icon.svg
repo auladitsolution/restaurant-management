@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Emerald to Amber (Matching Restaurant POS Brand) -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="50%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+
+    <!-- Golden Highlight Gradient for Details -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="50%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#064e3b" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Squircle App Icon Container -->
+  <rect x="24" y="24" width="464" height="464" rx="112" ry="112" fill="url(#bgGrad)"/>
+
+  <!-- Subtle Inner Border Highlight -->
+  <rect x="28" y="28" width="456" height="456" rx="108" ry="108" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="8"/>
+
+  <!-- Main Restaurant Emblem (Food Cloche / Serving Platter + Utensils) -->
+  <g filter="url(#shadow)">
+    <!-- Aroma / Steam Swirls -->
+    <path d="M210 130 C205 110, 220 95, 215 75" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-opacity="0.85"/>
+    <path d="M256 120 C250 100, 265 85, 260 65" fill="none" stroke="url(#goldGrad)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M302 130 C297 110, 312 95, 307 75" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-opacity="0.85"/>
+
+    <!-- Cloche Knob / Handle -->
+    <circle cx="256" cy="160" r="22" fill="url(#goldGrad)"/>
+    <path d="M256 182 L256 195" stroke="url(#goldGrad)" stroke-width="14" stroke-linecap="round"/>
+
+    <!-- Cloche Dome -->
+    <path d="M116 320 C116 200, 396 200, 396 320 Z" fill="#ffffff"/>
+    
+    <!-- Dome Inner Accent Line -->
+    <path d="M148 310 C160 230, 352 230, 364 310" fill="none" stroke="url(#goldGrad)" stroke-width="10" stroke-linecap="round" stroke-opacity="0.6"/>
+
+    <!-- Platter / Serving Tray Rim -->
+    <rect x="96" y="324" width="320" height="28" rx="14" fill="url(#goldGrad)"/>
+    
+    <!-- Base Plate -->
+    <path d="M136 352 L376 352 C366 380, 340 395, 256 395 C172 395, 146 380, 136 352 Z" fill="#ffffff" fill-opacity="0.95"/>
+
+    <!-- Fork & Spoon Accent inside Platter Base -->
+    <g transform="translate(256, 373) scale(0.65)">
+      <!-- Left: Fork -->
+      <path d="M-45 -14 L-45 10 M-55 -14 L-55 0 C-55 8, -35 8, -35 0 L-35 -14 M-45 10 L-45 30" 
+            stroke="#059669" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <!-- Center Star / Sparkle -->
+      <circle cx="0" cy="10" r="5" fill="#f59e0b"/>
+      <!-- Right: Spoon -->
+      <path d="M45 -14 C35 -14, 35 2, 45 4 C55 2, 55 -14, 45 -14 Z M45 4 L45 30" 
+            stroke="#059669" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="#059669"/>
+    </g>
+  </g>
+</svg>
