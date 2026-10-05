@@ -22,7 +22,15 @@ export async function GET(req: NextRequest) {
 
     const verified = await verifyFirebaseToken(token);
     if (!verified || !verified.uid) {
-      return NextResponse.json({ user: null }, { status: 200 });
+      console.warn("[Session API] Token verification failed or Firebase Admin is not initialized.");
+      return NextResponse.json(
+        {
+          user: null,
+          message:
+            "টোকেন যাচাই করা যায়নি বা Firebase Admin সার্ভিস সক্রিয় নয়। Vercel এর Environment Variables এ FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, এবং FIREBASE_PRIVATE_KEY সঠিক আছে কি না যাচাই করে Redeploy করুন।",
+        },
+        { status: 200 }
+      );
     }
 
     await connectToDatabase();
@@ -71,10 +79,19 @@ export async function GET(req: NextRequest) {
     }
 
     // 4. If still not found and email is available:
-    // Check if this matches INITIAL_OWNER_EMAIL or if no real owner exists yet in MongoDB
+    // Check if this matches allowed initial owner emails or if no real owner exists yet in MongoDB
     if (!user && verified.email) {
-      const initialOwnerEmail = (process.env.INITIAL_OWNER_EMAIL || "").toLowerCase().trim();
-      const isInitialOwner = initialOwnerEmail && verified.email.toLowerCase() === initialOwnerEmail;
+      const envEmails = (process.env.INITIAL_OWNER_EMAIL || "")
+        .toLowerCase()
+        .split(",")
+        .map((e) => e.trim());
+      const allowedOwnerEmails = [
+        "auladinfo@gmail.com",
+        "auladsoftware@gmail.com",
+        ...envEmails,
+      ].filter(Boolean);
+
+      const isInitialOwner = allowedOwnerEmails.includes(verified.email.toLowerCase());
       const hasRealOwner = await User.exists({
         role: "OWNER",
         active: true,
@@ -93,12 +110,17 @@ export async function GET(req: NextRequest) {
           active: true,
         });
         user = createdOwner.toObject();
+        console.log(`[Session API] New OWNER created for email: ${verified.email}`);
       }
     }
 
     if (!user) {
+      console.warn(`[Session API] User not registered: email=${verified.email}, uid=${verified.uid}`);
       return NextResponse.json(
-        { user: null, message: "অ্যাকাউন্টটি সিস্টেমে নিবন্ধিত নয়। অনুগ্রহ করে অ্যাডমিনের সাথে যোগাযোগ করুন।" },
+        {
+          user: null,
+          message: `আপনার গুগল অ্যাকাউন্টটি (${verified.email || verified.uid}) সিস্টেমে কোনো স্টাফ বা মালিক হিসেবে নিবন্ধিত নয়। অনুগ্রহ করে অ্যাডমিনের সাথে যোগাযোগ করুন।`,
+        },
         { status: 200 }
       );
     }

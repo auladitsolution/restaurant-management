@@ -16,7 +16,21 @@ function formatPrivateKey(key?: string): string | undefined {
   ) {
     cleanKey = cleanKey.slice(1, -1).trim();
   }
-  return cleanKey.replace(/\\n/g, "\n");
+  cleanKey = cleanKey.replace(/\\n/g, "\n");
+
+  // Handle base64 encoded private key if provided
+  if (!cleanKey.includes("-----BEGIN PRIVATE KEY-----")) {
+    try {
+      const decoded = Buffer.from(cleanKey, "base64").toString("utf-8");
+      if (decoded.includes("-----BEGIN PRIVATE KEY-----")) {
+        cleanKey = decoded;
+      }
+    } catch {
+      // not base64, ignore
+    }
+  }
+
+  return cleanKey;
 }
 
 export function getFirebaseAdminApp(): App | null {
@@ -25,6 +39,28 @@ export function getFirebaseAdminApp(): App | null {
     return currentApps[0]!;
   }
 
+  // 1. Support full JSON service account if provided
+  const serviceAccountJson =
+    process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
+    process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (serviceAccountJson) {
+    try {
+      const parsed = JSON.parse(serviceAccountJson);
+      if (parsed.project_id && parsed.client_email && parsed.private_key) {
+        return initializeApp({
+          credential: cert({
+            projectId: parsed.project_id,
+            clientEmail: parsed.client_email,
+            privateKey: formatPrivateKey(parsed.private_key)!,
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("[Firebase Admin] Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY JSON:", err);
+    }
+  }
+
+  // 2. Standard individual environment variables
   const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = formatPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
@@ -42,12 +78,6 @@ export function getFirebaseAdminApp(): App | null {
       console.error("[Firebase Admin] Initialization error:", err);
       return null;
     }
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    console.warn(
-      `[Firebase Admin] Incomplete credentials in production: projectId=${Boolean(projectId)}, clientEmail=${Boolean(clientEmail)}, privateKey=${Boolean(privateKey)}`
-    );
   }
 
   return null;
@@ -85,8 +115,17 @@ export async function verifyFirebaseToken(token: string): Promise<{ uid: string;
     }
   }
 
+  const pId = Boolean(process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+  const cEmail = Boolean(process.env.FIREBASE_CLIENT_EMAIL);
+  const pKey = Boolean(process.env.FIREBASE_PRIVATE_KEY);
+
   console.error(
-    "[Firebase Admin] Cannot verify token: Firebase Admin App is not initialized. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY."
+    `[Firebase Admin] Cannot verify token: Firebase Admin App is not initialized.\n` +
+    `Missing Environment Variables on Vercel:\n` +
+    `- FIREBASE_PROJECT_ID: ${pId ? "FOUND" : "MISSING"}\n` +
+    `- FIREBASE_CLIENT_EMAIL: ${cEmail ? "FOUND" : "MISSING"}\n` +
+    `- FIREBASE_PRIVATE_KEY: ${pKey ? "FOUND" : "MISSING"}\n` +
+    `Please add these 3 variables in your Vercel Project Settings > Environment Variables.`
   );
   return null;
 }
