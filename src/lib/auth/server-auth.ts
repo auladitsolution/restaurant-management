@@ -49,6 +49,16 @@ export async function authenticateRequest(
     active: true,
   }).lean<IUserDocument | null>();
 
+  // If not found by firebaseUid, look up by email and link
+  if (!dbUser && verified.email) {
+    const existing = await User.findOne({ email: verified.email.toLowerCase(), active: true });
+    if (existing) {
+      existing.firebaseUid = verified.uid;
+      await existing.save();
+      dbUser = existing.toObject();
+    }
+  }
+
   if (!dbUser && process.env.NODE_ENV !== "production" && verified.uid.startsWith("dev-uid-")) {
     const validRoles = ["OWNER", "MANAGER", "CASHIER", "WAITER", "KITCHEN", "INVENTORY_MANAGER"];
     const roleStr = verified.uid.replace("dev-uid-", "").toUpperCase();

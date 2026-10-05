@@ -4,6 +4,8 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import {
   User as FirebaseUser,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithEmailAndPassword,
   signOut,
   onIdTokenChanged,
@@ -18,6 +20,7 @@ interface AuthContextType {
   idToken: string | null;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
+  loginWithGoogleRedirect: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (permission: Permission) => boolean;
@@ -43,13 +46,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         if (data.user) {
           setUser(data.user);
+          return data.user;
+        } else {
+          setUser(null);
+          throw new Error(data.message || "ব্যবহারকারী অ্যাকাউন্টটি সক্রিয় নয়");
         }
       } else {
         setUser(null);
+        throw new Error("সার্ভারে লগইন ভেরিফিকেশন ব্যর্থ হয়েছে");
       }
     } catch (err) {
       console.error("Failed to sync user session:", err);
       setUser(null);
+      throw err;
     }
   };
 
@@ -57,26 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isExplicitlyLoggedOut =
       typeof window !== "undefined" && localStorage.getItem("pos_logged_out") === "true";
 
-    // Check if dev token was stored
-    let devToken = typeof window !== "undefined" ? localStorage.getItem("pos_dev_token") : null;
+    const devToken =
+      typeof window !== "undefined" ? localStorage.getItem("pos_dev_token") : null;
 
     if (isExplicitlyLoggedOut) {
-      // User explicitly clicked logout - do not auto-login
       setLoading(false);
       setUser(null);
       setIdToken(null);
       setFirebaseUser(null);
-      return;
-    }
-
-    // In local development, auto-provision an active OWNER session if not logged in
-    if (!devToken && process.env.NODE_ENV !== "production") {
-      devToken = "dev-token-dev-uid-owner";
-      localStorage.setItem("pos_dev_token", devToken);
-      document.cookie = `auth-token=${devToken}; path=/; max-age=86400; SameSite=Lax`;
-    }
-
-    if (devToken && process.env.NODE_ENV !== "production") {
+    } else if (devToken && process.env.NODE_ENV !== "production") {
       setIdToken(devToken);
       const roleStr = devToken.replace("dev-token-dev-uid-", "").toUpperCase();
       const initialRole = (roleStr || "OWNER") as UserRole;
@@ -93,23 +91,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updatedAt: new Date(),
       });
       syncUserWithBackend(devToken).finally(() => setLoading(false));
-      return;
     }
 
+    // Handle redirect login results (if user was redirected from Google auth)
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result && result.user) {
+          const fbUser = result.user;
+          setFirebaseUser(fbUser);
+          const token = await fbUser.getIdToken(true);
+          setIdToken(token);
+          document.cookie = `auth-token=${token}; path=/; max-age=86400; SameSite=Lax`;
+          await syncUserWithBackend(token);
+        }
+      })
+      .catch((err) => {
+        console.error("Redirect sign-in error:", err);
+      });
+
     const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
+      const activeDevToken =
+        typeof window !== "undefined" ? localStorage.getItem("pos_dev_token") : null;
+      if (activeDevToken && process.env.NODE_ENV !== "production") {
+        return;
+      }
+
+      const isLoggedOut =
+        typeof window !== "undefined" && localStorage.getItem("pos_logged_out") === "true";
+      if (isLoggedOut || !fbUser) {
+        setFirebaseUser(null);
+        setUser(null);
+        setIdToken(null);
+        document.cookie = "auth-token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        setLoading(false);
+        return;
+      }
+
       setFirebaseUser(fbUser);
-      if (fbUser) {
+      try {
         const token = await fbUser.getIdToken();
         setIdToken(token);
-        // Set cookie for Next.js SSR / API routes
         document.cookie = `auth-token=${token}; path=/; max-age=86400; SameSite=Lax`;
         await syncUserWithBackend(token);
-      } else {
-        setIdToken(null);
-        setUser(null);
-        document.cookie = `auth-token=; path=/; max-age=0`;
+      } catch (e) {
+        console.error("Firebase auth token refresh error:", e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -120,8 +148,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (typeof window !== "undefined") {
         localStorage.removeItem("pos_logged_out");
+        localStorage.removeItem("pos_dev_token");
       }
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const fbUser = result.user;
+      setFirebaseUser(fbUser);
+      const token = await fbUser.getIdToken(true);
+      setIdToken(token);
+      document.cookie = `auth-token=${token}; path=/; max-age=86400; SameSite=Lax`;
+      await syncUserWithBackend(token);
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogleRedirect = async () => {
+    setLoading(true);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("pos_logged_out");
+        localStorage.removeItem("pos_dev_token");
+      }
+      await signInWithRedirect(auth, googleProvider);
     } catch (err) {
       setLoading(false);
       throw err;
@@ -133,11 +184,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (typeof window !== "undefined") {
         localStorage.removeItem("pos_logged_out");
+        localStorage.removeItem("pos_dev_token");
       }
-      await signInWithEmailAndPassword(auth, email, pass);
+      const result = await signInWithEmailAndPassword(auth, email, pass);
+      const fbUser = result.user;
+      setFirebaseUser(fbUser);
+      const token = await fbUser.getIdToken(true);
+      setIdToken(token);
+      document.cookie = `auth-token=${token}; path=/; max-age=86400; SameSite=Lax`;
+      await syncUserWithBackend(token);
     } catch (err) {
       setLoading(false);
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -205,6 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         idToken,
         loading,
         loginWithGoogle,
+        loginWithGoogleRedirect,
         loginWithEmail,
         logout,
         hasPermission: hasPerm,

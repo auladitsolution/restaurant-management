@@ -1,4 +1,4 @@
-import { getApps, initializeApp, cert, App } from "firebase-admin/app";
+import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
 interface FirebaseAdminConfig {
@@ -9,14 +9,15 @@ interface FirebaseAdminConfig {
 
 function formatPrivateKey(key?: string): string | undefined {
   if (!key) return undefined;
-  return key.replace(/\\n/g, "\n");
+  let cleanKey = key.trim();
+  if (
+    (cleanKey.startsWith('"') && cleanKey.endsWith('"')) ||
+    (cleanKey.startsWith("'") && cleanKey.endsWith("'"))
+  ) {
+    cleanKey = cleanKey.slice(1, -1).trim();
+  }
+  return cleanKey.replace(/\\n/g, "\n");
 }
-
-const config: FirebaseAdminConfig = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: formatPrivateKey(process.env.FIREBASE_PRIVATE_KEY),
-};
 
 export function getFirebaseAdminApp(): App | null {
   const currentApps = getApps();
@@ -24,13 +25,17 @@ export function getFirebaseAdminApp(): App | null {
     return currentApps[0]!;
   }
 
-  if (config.projectId && config.clientEmail && config.privateKey) {
+  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = formatPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
+
+  if (projectId && clientEmail && privateKey) {
     try {
       return initializeApp({
         credential: cert({
-          projectId: config.projectId,
-          clientEmail: config.clientEmail,
-          privateKey: config.privateKey,
+          projectId,
+          clientEmail,
+          privateKey,
         }),
       });
     } catch (err) {
@@ -39,7 +44,12 @@ export function getFirebaseAdminApp(): App | null {
     }
   }
 
-  // If credentials are incomplete in local development
+  if (process.env.NODE_ENV === "production") {
+    console.warn(
+      `[Firebase Admin] Incomplete credentials in production: projectId=${Boolean(projectId)}, clientEmail=${Boolean(clientEmail)}, privateKey=${Boolean(privateKey)}`
+    );
+  }
+
   return null;
 }
 
@@ -49,13 +59,13 @@ export function getFirebaseAdminApp(): App | null {
  * In development mode with local credentials unset, accepts mock token "dev-token-<firebaseUid>"
  * to allow seamless local testing of the full software suite.
  */
-export async function verifyFirebaseToken(token: string): Promise<{ uid: string; email?: string } | null> {
+export async function verifyFirebaseToken(token: string): Promise<{ uid: string; email?: string; name?: string; picture?: string } | null> {
   if (!token) return null;
 
   // Local development / testing bypass for mock dev tokens
   if (process.env.NODE_ENV !== "production" && token.startsWith("dev-token-")) {
     const uid = token.replace("dev-token-", "");
-    return { uid, email: `${uid}@swadrestaurant.com` };
+    return { uid, email: `${uid}@swadrestaurant.com`, name: `Dev ${uid.replace("dev-uid-", "").toUpperCase()}` };
   }
 
   const app = getFirebaseAdminApp();
@@ -66,6 +76,8 @@ export async function verifyFirebaseToken(token: string): Promise<{ uid: string;
       return {
         uid: decoded.uid,
         email: decoded.email,
+        name: (decoded.name as string) || undefined,
+        picture: (decoded.picture as string) || undefined,
       };
     } catch (error) {
       console.error("[Firebase Admin] Token verification failed:", error);
@@ -73,5 +85,8 @@ export async function verifyFirebaseToken(token: string): Promise<{ uid: string;
     }
   }
 
+  console.error(
+    "[Firebase Admin] Cannot verify token: Firebase Admin App is not initialized. Check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY."
+  );
   return null;
 }
