@@ -75,4 +75,26 @@ describe("RBAC Permissions and Roles", () => {
     expect(hasPermission(inactiveUser, "pos:access")).toBe(false);
     expect(hasRole(inactiveUser, ["MANAGER"])).toBe(false);
   });
+
+  it("handles anonymous guest users properly", () => {
+    const guestUser: IUser = {
+      _id: "guest-id",
+      firebaseUid: "guest-uid",
+      name: "অতিথি ব্যবহারকারী (Guest)",
+      email: "guest-uid@anonymous.local",
+      role: "CASHIER",
+      permissions: [],
+      isAnonymous: true,
+      active: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    expect(guestUser.isAnonymous).toBe(true);
+    expect(hasPermission(guestUser, "pos:access")).toBe(true);
+    expect(hasPermission(guestUser, "orders:create")).toBe(true);
+    expect(hasPermission(guestUser, "settings:manage")).toBe(false);
+    expect(hasRole(guestUser, ["CASHIER"])).toBe(true);
+    expect(hasRole(guestUser, ["OWNER"])).toBe(false);
+  });
 });

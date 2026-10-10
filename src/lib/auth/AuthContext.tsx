@@ -7,6 +7,8 @@ import {
   signInWithRedirect,
   getRedirectResult,
   signInWithEmailAndPassword,
+  signInAnonymously,
+  linkWithPopup,
   signOut,
   onIdTokenChanged,
 } from "firebase/auth";
@@ -19,9 +21,12 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   idToken: string | null;
   loading: boolean;
+  isAnonymous: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithGoogleRedirect: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
+  loginAnonymously: () => Promise<void>;
+  linkWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (permission: Permission) => boolean;
   hasRole: (allowedRoles: UserRole[]) => boolean;
@@ -201,6 +206,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginAnonymously = async () => {
+    setLoading(true);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("pos_logged_out");
+        localStorage.removeItem("pos_dev_token");
+      }
+      const result = await signInAnonymously(auth);
+      const fbUser = result.user;
+      setFirebaseUser(fbUser);
+      const token = await fbUser.getIdToken(true);
+      setIdToken(token);
+      document.cookie = `auth-token=${token}; path=/; max-age=86400; SameSite=Lax`;
+      await syncUserWithBackend(token);
+    } catch (err: any) {
+      setLoading(false);
+      if (
+        err?.code === "auth/admin-restricted-operation" ||
+        err?.code === "auth/operation-not-allowed"
+      ) {
+        const enhancedError: any = new Error(
+          "Firebase Console-এ Anonymous Authentication এনেবল (Enable) করা নেই।"
+        );
+        enhancedError.code = err.code;
+        throw enhancedError;
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const linkWithGoogle = async () => {
+    if (!auth.currentUser) throw new Error("কোনো সক্রিয় অ্যাকাউন্ট পাওয়া যায়নি");
+    setLoading(true);
+    try {
+      const result = await linkWithPopup(auth.currentUser, googleProvider);
+      const fbUser = result.user;
+      setFirebaseUser(fbUser);
+      const token = await fbUser.getIdToken(true);
+      setIdToken(token);
+      document.cookie = `auth-token=${token}; path=/; max-age=86400; SameSite=Lax`;
+      await syncUserWithBackend(token);
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     if (typeof window !== "undefined") {
@@ -264,9 +320,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firebaseUser,
         idToken,
         loading,
+        isAnonymous: Boolean(firebaseUser?.isAnonymous || user?.isAnonymous),
         loginWithGoogle,
         loginWithGoogleRedirect,
         loginWithEmail,
+        loginAnonymously,
+        linkWithGoogle,
         logout,
         hasPermission: hasPerm,
         hasRole: hasR,

@@ -76,6 +76,21 @@ export async function authenticateRequest(
     dbUser = created.toObject();
   }
 
+  // If not found and verified as anonymous, auto-provision guest user
+  if (!dbUser && (verified.isAnonymous || !verified.email)) {
+    const created = await User.create({
+      firebaseUid: verified.uid,
+      name: verified.name || "অতিথি ব্যবহারকারী (Guest)",
+      email: `guest-${verified.uid}@anonymous.local`,
+      phone: "",
+      role: "CASHIER",
+      permissions: [],
+      isAnonymous: true,
+      active: true,
+    });
+    dbUser = created.toObject();
+  }
+
   if (!dbUser) {
     return null;
   }
@@ -89,6 +104,7 @@ export async function authenticateRequest(
     photo: dbUser.photo,
     role: dbUser.role,
     permissions: dbUser.permissions || [],
+    isAnonymous: Boolean(dbUser.isAnonymous || verified.isAnonymous),
     active: dbUser.active,
     createdAt: dbUser.createdAt,
     updatedAt: dbUser.updatedAt,

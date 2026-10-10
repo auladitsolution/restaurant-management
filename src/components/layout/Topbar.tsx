@@ -17,6 +17,8 @@ import {
   X,
   LogOut,
   ChevronDown,
+  UserCheck,
+  Link2,
 } from "lucide-react";
 import { UserRole, INotification } from "@/types";
 import { ROLE_NAMES_BN } from "@/lib/permissions/rbac";
@@ -24,7 +26,7 @@ import { formatBDT } from "@/lib/calculations/financial";
 
 export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
   const router = useRouter();
-  const { user, devLogin, logout } = useAuth();
+  const { user, isAnonymous, linkWithGoogle, devLogin, logout } = useAuth();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -393,8 +395,15 @@ export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
               {user?.name ? user.name.slice(0, 1) : <UserIcon className="w-4 h-4" />}
             </div>
             <div className="hidden sm:block text-left">
-              <div className="text-xs font-semibold text-slate-800 leading-tight">
-                {user?.name || "অতিথি"}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-slate-800 leading-tight">
+                  {user?.name || "অতিথি"}
+                </span>
+                {(isAnonymous || user?.isAnonymous) && (
+                  <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-bold rounded-sm">
+                    গেস্ট
+                  </span>
+                )}
               </div>
               <div className="text-[10px] text-slate-500 font-medium">
                 {user?.role ? ROLE_NAMES_BN[user.role] || user.role : "নিয়মিত ব্যবহারকারী"}
@@ -416,12 +425,46 @@ export function Topbar({ onOpenMobile }: { onOpenMobile: () => void }) {
           {userMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3 z-50 animate-in fade-in">
               <div className="px-3 py-2 border-b border-slate-100 mb-2">
-                <div className="font-bold text-xs text-slate-900">{user?.name || "অতিথি"}</div>
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-xs text-slate-900">{user?.name || "অতিথি"}</div>
+                  {(isAnonymous || user?.isAnonymous) && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800">
+                      অ্যানোনিমাস
+                    </span>
+                  )}
+                </div>
                 <div className="text-[11px] text-slate-500 truncate">{user?.email}</div>
                 <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                   {user?.role ? ROLE_NAMES_BN[user.role] || user.role : "GUEST"}
                 </span>
               </div>
+
+              {(isAnonymous || user?.isAnonymous) && (
+                <div className="p-2.5 mb-2 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-900">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>অস্থায়ী গেস্ট সেশন</span>
+                  </div>
+                  <p className="text-[10px] text-emerald-700 leading-tight">
+                    ডাটা স্থায়ী রাখতে গুগল অ্যাকাউন্টের সাথে লিঙ্ক করতে পারেন।
+                  </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await linkWithGoogle();
+                        toast.success("সফলভাবে গুগল অ্যাকাউন্টের সাথে যুক্ত হয়েছে!");
+                      } catch (err: any) {
+                        toast.error(err?.message || "লিঙ্ক করতে ব্যর্থ হয়েছে");
+                      }
+                    }}
+                    className="w-full py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    গুগল দিয়ে পার্মানেন্ট করুন
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-1">
                 <Link

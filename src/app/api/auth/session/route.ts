@@ -44,6 +44,25 @@ export async function GET(req: NextRequest) {
     // 1. Try to find user by firebaseUid
     let user = await User.findOne({ firebaseUid: verified.uid }).lean<IUserDocument | null>();
 
+    // If an anonymous user was upgraded/linked to Google or Email, update their record
+    if (user && user.isAnonymous && verified.email) {
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            isAnonymous: false,
+            email: verified.email.toLowerCase(),
+            name: verified.name && !verified.name.startsWith("Dev ") ? verified.name : user.name,
+            photo: verified.picture || user.photo,
+          },
+        }
+      );
+      user.isAnonymous = false;
+      user.email = verified.email.toLowerCase();
+      if (verified.name && !verified.name.startsWith("Dev ")) user.name = verified.name;
+      if (verified.picture) user.photo = verified.picture;
+    }
+
     // 2. If not found by firebaseUid, look up by email to link Google account
     if (!user && verified.email) {
       const existingByEmail = await User.findOne({ email: verified.email.toLowerCase() });
@@ -114,12 +133,28 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // 5. Handle Anonymous User: if user is anonymous or has no email, create a guest account
+    if (!user && (verified.isAnonymous || !verified.email)) {
+      const createdGuest = await User.create({
+        firebaseUid: verified.uid,
+        name: verified.name || "অতিথি ব্যবহারকারী (Guest)",
+        email: `guest-${verified.uid}@anonymous.local`,
+        phone: "",
+        role: "CASHIER",
+        permissions: [],
+        isAnonymous: true,
+        active: true,
+      });
+      user = createdGuest.toObject();
+      console.log(`[Session API] New Anonymous User created: uid=${verified.uid}`);
+    }
+
     if (!user) {
       console.warn(`[Session API] User not registered: email=${verified.email}, uid=${verified.uid}`);
       return NextResponse.json(
         {
           user: null,
-          message: `আপনার গুগল অ্যাকাউন্টটি (${verified.email || verified.uid}) সিস্টেমে কোনো স্টাফ বা মালিক হিসেবে নিবন্ধিত নয়। অনুগ্রহ করে অ্যাডমিনের সাথে যোগাযোগ করুন।`,
+          message: `আপনার অ্যাকাউন্টটি (${verified.email || verified.uid}) সিস্টেমে কোনো স্টাফ বা মালিক হিসেবে নিবন্ধিত নয়। অনুগ্রহ করে অ্যাডমিনের সাথে যোগাযোগ করুন।`,
         },
         { status: 200 }
       );
@@ -140,6 +175,7 @@ export async function GET(req: NextRequest) {
         photo: user.photo,
         role: user.role,
         permissions: user.permissions || [],
+        isAnonymous: Boolean(user.isAnonymous || verified.isAnonymous),
         active: user.active,
       },
       settings,

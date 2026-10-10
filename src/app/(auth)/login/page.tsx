@@ -6,16 +6,19 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Store, LogIn, Sparkles, Shield, User, UtensilsCrossed, ChefHat, Boxes } from "lucide-react";
+import { Store, LogIn, Sparkles, Shield, User, UtensilsCrossed, ChefHat, Boxes, UserCheck, AlertTriangle, ExternalLink } from "lucide-react";
 import { UserRole } from "@/types";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginWithGoogle, loginWithGoogleRedirect, loginWithEmail, devLogin, loading } = useAuth();
+  const { loginWithGoogle, loginWithGoogleRedirect, loginWithEmail, loginAnonymously, devLogin, loading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showAnonAlert, setShowAnonAlert] = useState(false);
+
+  const firebaseProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "restaurant-management-ae314";
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +69,30 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error("Google redirect sign-in error:", err);
       toast.error(err?.message || "গুগল রিডাইরেক্ট লগইন ব্যর্থ হয়েছে");
+      setSubmitting(false);
+    }
+  };
+
+  const handleAnonymousLogin = async () => {
+    setSubmitting(true);
+    setShowAnonAlert(false);
+    try {
+      await loginAnonymously();
+      toast.success("গেস্ট হিসেবে সফলভাবে প্রবেশ করেছেন!");
+      router.push("/");
+    } catch (err: any) {
+      console.error("Anonymous login error:", err);
+      const isRestricted =
+        err?.code === "auth/admin-restricted-operation" ||
+        err?.code === "auth/operation-not-allowed";
+
+      if (isRestricted) {
+        setShowAnonAlert(true);
+        toast.error("Firebase Console এ Anonymous সাইন-ইন চালু (Enable) করা নেই!");
+      } else {
+        toast.error(err?.message || "গেস্ট লগইন ব্যর্থ হয়েছে");
+      }
+    } finally {
       setSubmitting(false);
     }
   };
@@ -173,6 +200,60 @@ export default function LoginPage() {
             পপআপে সমস্যা হচ্ছে? এখানে ক্লিক করে রিডাইরেক্ট দিয়ে লগইন করুন
           </button>
         </div>
+
+        {/* Anonymous / Guest Sign In */}
+        <div className="space-y-1">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleAnonymousLogin}
+            disabled={submitting}
+            className="w-full py-2.5 font-semibold text-xs text-slate-700 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 transition-all flex items-center justify-center gap-2"
+          >
+            <UserCheck className="w-4 h-4 text-emerald-600" />
+            গেস্ট হিসেবে প্রবেশ করুন (Anonymous Sign-In)
+          </Button>
+          <p className="text-[11px] text-center text-slate-400">
+            কোনো ইমেইল বা পাসওয়ার্ড ছাড়াই তাৎক্ষণিক POS ট্রাই করুন
+          </p>
+        </div>
+
+        {/* Firebase Console Anonymous Enable Alert */}
+        {showAnonAlert && (
+          <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs space-y-2 animate-in fade-in duration-150">
+            <div className="flex items-start gap-2 text-rose-800 font-bold">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>Firebase-এ Anonymous Sign-in চালু নেই</span>
+            </div>
+            <p className="text-[11px] text-rose-700 leading-relaxed">
+              Firebase Console এ <b>Anonymous</b> প্রোভাইডার সক্রিয় করতে হবে:
+              <br />
+              <b>Authentication &gt; Sign-in method &gt; Anonymous &gt; Enable</b>
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <a
+                href={`https://console.firebase.google.com/project/${firebaseProjectId}/authentication/providers`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 py-1.5 px-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors text-center"
+              >
+                <span>Firebase Console খুলুন</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              {process.env.NODE_ENV !== "production" && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleQuickDevLogin("CASHIER")}
+                  className="py-1.5 px-2.5 text-[11px] bg-white text-slate-700 hover:bg-slate-50 border-rose-300"
+                >
+                  টেস্ট গেস্ট হিসেবে প্রবেশ
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Development Quick Role Switcher */}
         {process.env.NODE_ENV !== "production" && (

@@ -10,6 +10,7 @@ export interface IUserDocument extends Document {
   role: UserRole;
   permissions: Permission[];
   active: boolean;
+  isAnonymous?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +29,7 @@ const UserSchema = new Schema<IUserDocument>(
       index: true,
     },
     permissions: [{ type: String }],
+    isAnonymous: { type: Boolean, default: false, index: true },
     active: { type: Boolean, default: true, index: true },
   },
   { timestamps: true }

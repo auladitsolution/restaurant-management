@@ -83,19 +83,35 @@ export function getFirebaseAdminApp(): App | null {
   return null;
 }
 
+export interface VerifiedFirebaseToken {
+  uid: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+  isAnonymous?: boolean;
+  providerId?: string;
+}
+
 /**
  * Server-side Firebase ID token verification.
  * In production or when credentials exist, strictly verifies the token.
  * In development mode with local credentials unset, accepts mock token "dev-token-<firebaseUid>"
  * to allow seamless local testing of the full software suite.
  */
-export async function verifyFirebaseToken(token: string): Promise<{ uid: string; email?: string; name?: string; picture?: string } | null> {
+export async function verifyFirebaseToken(token: string): Promise<VerifiedFirebaseToken | null> {
   if (!token) return null;
 
   // Local development / testing bypass for mock dev tokens
   if (process.env.NODE_ENV !== "production" && token.startsWith("dev-token-")) {
     const uid = token.replace("dev-token-", "");
-    return { uid, email: `${uid}@swadrestaurant.com`, name: `Dev ${uid.replace("dev-uid-", "").toUpperCase()}` };
+    const isAnon = uid.includes("anonymous") || uid.includes("guest");
+    return {
+      uid,
+      email: isAnon ? undefined : `${uid}@swadrestaurant.com`,
+      name: isAnon ? "অতিথি ব্যবহারকারী (Guest)" : `Dev ${uid.replace("dev-uid-", "").toUpperCase()}`,
+      isAnonymous: isAnon,
+      providerId: isAnon ? "anonymous" : "password",
+    };
   }
 
   const app = getFirebaseAdminApp();
@@ -103,11 +119,16 @@ export async function verifyFirebaseToken(token: string): Promise<{ uid: string;
   if (app) {
     try {
       const decoded = await getAuth(app).verifyIdToken(token);
+      const isAnonymous =
+        decoded.firebase?.sign_in_provider === "anonymous" ||
+        (!decoded.email && !decoded.name);
       return {
         uid: decoded.uid,
         email: decoded.email,
-        name: (decoded.name as string) || undefined,
+        name: (decoded.name as string) || (isAnonymous ? "অতিথি ব্যবহারকারী (Guest)" : undefined),
         picture: (decoded.picture as string) || undefined,
+        isAnonymous,
+        providerId: decoded.firebase?.sign_in_provider,
       };
     } catch (error) {
       console.error("[Firebase Admin] Token verification failed:", error);

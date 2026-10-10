@@ -42,9 +42,11 @@ export interface IUser {
   role: UserRole;
   permissions: Permission[];
   active: boolean;
+  isAnonymous?: boolean;
   createdAt: string | Date;
   updatedAt: string | Date;
 }
+
 
 export interface IRestaurantSettings {
   _id?: string;

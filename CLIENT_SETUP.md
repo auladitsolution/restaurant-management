@@ -48,6 +48,7 @@ Each restaurant client receives their own isolated instance:
 3. Under **Sign-in method**, enable:
    - **Email/Password**: Enable "Email/Password" (keep "Email link" disabled).
    - **Google**: Enable if the restaurant owner or managers prefer one-click Google Sign-in. Configure the support email.
+   - **Anonymous**: Enable to permit instant guest evaluations, table QR guest ordering, and demo POS testing.
 
 ### Step 5: Configure Authorized Domains
 1. In Firebase Authentication, click the **Settings** tab.
