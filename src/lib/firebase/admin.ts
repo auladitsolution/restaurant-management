@@ -101,13 +101,13 @@ export interface VerifiedFirebaseToken {
 export async function verifyFirebaseToken(token: string): Promise<VerifiedFirebaseToken | null> {
   if (!token) return null;
 
-  // Local development / testing bypass for mock dev tokens
-  if (process.env.NODE_ENV !== "production" && token.startsWith("dev-token-")) {
+  // Allow mock dev / demo tokens (both locally and on Vercel for preview & instant testing)
+  if (token.startsWith("dev-token-")) {
     const uid = token.replace("dev-token-", "");
-    const isAnon = uid.includes("anonymous") || uid.includes("guest");
+    const isAnon = uid.includes("anonymous") || uid.includes("guest") || uid.includes("cashier");
     return {
       uid,
-      email: isAnon ? undefined : `${uid}@swadrestaurant.com`,
+      email: isAnon && uid.includes("guest") ? undefined : `${uid}@swadrestaurant.com`,
       name: isAnon ? "অতিথি ব্যবহারকারী (Guest)" : `Dev ${uid.replace("dev-uid-", "").toUpperCase()}`,
       isAnonymous: isAnon,
       providerId: isAnon ? "anonymous" : "password",

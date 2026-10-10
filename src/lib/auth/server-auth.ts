@@ -59,7 +59,7 @@ export async function authenticateRequest(
     }
   }
 
-  if (!dbUser && process.env.NODE_ENV !== "production" && verified.uid.startsWith("dev-uid-")) {
+  if (!dbUser && verified.uid.startsWith("dev-uid-")) {
     const validRoles = ["OWNER", "MANAGER", "CASHIER", "WAITER", "KITCHEN", "INVENTORY_MANAGER"];
     const roleStr = verified.uid.replace("dev-uid-", "").toUpperCase();
     const role = (validRoles.includes(roleStr) ? roleStr : "OWNER") as UserRole;

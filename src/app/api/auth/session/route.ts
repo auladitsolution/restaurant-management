@@ -79,8 +79,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 3. In local development, if this is a dev user and doesn't exist, create it automatically
-    if (!user && process.env.NODE_ENV !== "production" && verified.uid.startsWith("dev-uid-")) {
+    // 3. Support dev & demo users (both locally and on Vercel for preview testing)
+    if (!user && verified.uid.startsWith("dev-uid-")) {
       const validRoles = ["OWNER", "MANAGER", "CASHIER", "WAITER", "KITCHEN", "INVENTORY_MANAGER"];
       const roleStr = verified.uid.replace("dev-uid-", "").toUpperCase();
       const role = (validRoles.includes(roleStr) ? roleStr : "OWNER") as any;

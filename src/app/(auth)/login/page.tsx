@@ -240,86 +240,82 @@ export default function LoginPage() {
                 <span>Firebase Console খুলুন</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
-              {process.env.NODE_ENV !== "production" && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleQuickDevLogin("CASHIER")}
-                  className="py-1.5 px-2.5 text-[11px] bg-white text-slate-700 hover:bg-slate-50 border-rose-300"
-                >
-                  টেস্ট গেস্ট হিসেবে প্রবেশ
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Development Quick Role Switcher */}
-        {process.env.NODE_ENV !== "production" && (
-          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-2.5">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <span>ডেভেলপমেন্ট ১-ক্লিক টেস্ট লগইন:</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => handleQuickDevLogin("OWNER")}
-                className="justify-start gap-1.5 text-xs bg-white text-emerald-800 font-bold"
-              >
-                <Shield className="w-3.5 h-3.5 text-emerald-600" /> মালিক (Owner)
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => handleQuickDevLogin("MANAGER")}
-                className="justify-start gap-1.5 text-xs bg-white text-slate-700"
-              >
-                <User className="w-3.5 h-3.5 text-sky-600" /> ম্যানেজার
-              </Button>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
                 onClick={() => handleQuickDevLogin("CASHIER")}
-                className="justify-start gap-1.5 text-xs bg-white text-slate-700"
+                className="py-1.5 px-2.5 text-[11px] bg-white text-slate-700 hover:bg-slate-50 border-rose-300"
               >
-                <LogIn className="w-3.5 h-3.5 text-amber-600" /> ক্যাশিয়ার
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => handleQuickDevLogin("WAITER")}
-                className="justify-start gap-1.5 text-xs bg-white text-slate-700"
-              >
-                <UtensilsCrossed className="w-3.5 h-3.5 text-purple-600" /> ওয়েটার
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => handleQuickDevLogin("KITCHEN")}
-                className="justify-start gap-1.5 text-xs bg-white text-slate-700"
-              >
-                <ChefHat className="w-3.5 h-3.5 text-rose-600" /> কিচেন স্টাফ
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => handleQuickDevLogin("INVENTORY_MANAGER")}
-                className="justify-start gap-1.5 text-xs bg-white text-slate-700"
-              >
-                <Boxes className="w-3.5 h-3.5 text-indigo-600" /> ইনভেন্টরি
+                টেস্ট গেস্ট হিসেবে প্রবেশ
               </Button>
             </div>
           </div>
         )}
+
+        {/* Demo & Test Quick Role Switcher */}
+        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-2.5">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800">
+            <Sparkles className="w-4 h-4 text-amber-600" />
+            <span>১-ক্লিক ডেমো / টেস্ট লগইন:</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => handleQuickDevLogin("OWNER")}
+              className="justify-start gap-1.5 text-xs bg-white text-emerald-800 font-bold"
+            >
+              <Shield className="w-3.5 h-3.5 text-emerald-600" /> মালিক (Owner)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => handleQuickDevLogin("MANAGER")}
+              className="justify-start gap-1.5 text-xs bg-white text-slate-700"
+            >
+              <User className="w-3.5 h-3.5 text-sky-600" /> ম্যানেজার
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => handleQuickDevLogin("CASHIER")}
+              className="justify-start gap-1.5 text-xs bg-white text-slate-700"
+            >
+              <LogIn className="w-3.5 h-3.5 text-amber-600" /> ক্যাশিয়ার
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => handleQuickDevLogin("WAITER")}
+              className="justify-start gap-1.5 text-xs bg-white text-slate-700"
+            >
+              <UtensilsCrossed className="w-3.5 h-3.5 text-purple-600" /> ওয়েটার
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => handleQuickDevLogin("KITCHEN")}
+              className="justify-start gap-1.5 text-xs bg-white text-slate-700"
+            >
+              <ChefHat className="w-3.5 h-3.5 text-rose-600" /> কিচেন স্টাফ
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => handleQuickDevLogin("INVENTORY_MANAGER")}
+              className="justify-start gap-1.5 text-xs bg-white text-slate-700"
+            >
+              <Boxes className="w-3.5 h-3.5 text-indigo-600" /> ইনভেন্টরি
+            </Button>
+          </div>
+        </div>
 
         <div className="text-center">
           <p className="text-[11px] text-slate-400">
